@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -10,6 +11,7 @@ using System.Windows.Interop;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Point = System.Windows.Point;
+using Color = System.Windows.Media.Color;
 
 
 namespace PixelPicker
@@ -19,24 +21,24 @@ namespace PixelPicker
 
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
-        public Window MagnifierWindow { get; private set; }
-        private double _zoomLevel;
+        DispatcherTimer Timer { get; set; }
+        public ObservableCollection<Color> PickedColors { get; set; } = new ObservableCollection<Color>();
+        public bool PickModeOn { get; set; }
 
-        public event PropertyChangedEventHandler PropertyChanged;
 
-        [DllImport("gdi32.dll")]
-        public static extern bool DeleteObject(IntPtr onj);
-
-        private void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string propertyName = "")
-        {
-            PropertyChanged.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        private Color _pickedColor;
+        public Color PickedColor 
+        { 
+            get { return _pickedColor; }
+            set 
+            { 
+                _pickedColor = value;
+                OnPropertyChanged();
+            } 
         }
 
 
-        public System.Windows.Media.Color PickedColor { get; set; }
-
-        public bool PickModeOn { get; set; }
-
+        private double _zoomLevel;
         public double ZoomLevel 
         {
             get { return _zoomLevel; }
@@ -47,11 +49,19 @@ namespace PixelPicker
             }
         }
 
-        DispatcherTimer Timer { get; set; }
-        Point MousePosition { get; set; }
+        private void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string propertyName = "")
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+
+
         public MainWindow()
         {
             DataContext = this;
+            ZoomLevel = 200;
 
             InitializeComponent();
 
@@ -69,31 +79,30 @@ namespace PixelPicker
                 myPopup.HorizontalOffset = cursorPosition.X;
                 myPopup.VerticalOffset = cursorPosition.Y;
 
-                Window.Top = cursorPosition.Y; 
-                Window.Left = cursorPosition.X;
+                Bitmap bitmap;
+                bitmap = new Bitmap(50, 50, PixelFormat.Format32bppArgb);
 
-                //Bitmap bitmap;
-                //bitmap = new Bitmap(50, 50, PixelFormat.Format32bppArgb);
+                using (Graphics g = Graphics.FromImage(bitmap))
+                {
+                    g.CopyFromScreen((int)cursorPosition.X - 25, (int)cursorPosition.Y - 25, 0, 0, bitmap.Size);
+                }
 
-                //using (Graphics g = Graphics.FromImage(bitmap))
-                //{
-                //    g.CopyFromScreen((int)cursorPosition.X - 25, (int)cursorPosition.Y - 25, 0, 0, bitmap.Size);
-                //}
+                handle = bitmap.GetHbitmap();
+                imgControl.Source = Imaging.CreateBitmapSourceFromHBitmap(handle, IntPtr.Zero, Int32Rect.Empty,
+                    BitmapSizeOptions.FromEmptyOptions());
 
-                //handle = bitmap.GetHbitmap();
-                //imgControl.Source = Imaging.CreateBitmapSourceFromHBitmap(handle, IntPtr.Zero, Int32Rect.Empty,
-                //    BitmapSizeOptions.FromEmptyOptions());
+                var pixel = bitmap.GetPixel(25, 25);
+                PickedColor = Color.FromArgb(pixel.A, pixel.R, pixel.G, pixel.B);
 
-                //var pixel = bitmap.GetPixel(25, 25);
-                //PickedColor = System.Windows.Media.Color.FromArgb(pixel.A, pixel.R, pixel.G, pixel.B);
-                //OnPropertyChanged(nameof(PickedColor));
+                if (MouseHook.GetLeftButtonState() < 0)
+                {
+                    if (!this.IsMouseOver)
+                    {
+                        PickedColors.Add(PickedColor);
+                    }
 
-                //if (MouseHook.GetLeftButtonState() < 0)
-                //{
-                //    var pixel = bitmap.GetPixel(25, 25);
-                //    PickedColor = System.Windows.Media.Color.FromArgb(pixel.A, pixel.R, pixel.G, pixel.B);
-                //    OnPropertyChanged(nameof(PickedColor));
-                //}
+
+                }
             }
             catch (Exception)
             { }
@@ -103,6 +112,9 @@ namespace PixelPicker
             }
         }
 
+        [DllImport("gdi32.dll")]
+        public static extern bool DeleteObject(IntPtr onj);
+
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             PickModeOn = !PickModeOn;
@@ -110,25 +122,16 @@ namespace PixelPicker
             if (PickModeOn)
             {
                 Timer.Start();
-                btnPlay.Content = "Stop pick color";
 
                 Point mousePos = MouseHook.GetCursorPosition();
-
-                Window = new Window();
-                Window.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-                Window.Top = mousePos.Y;
-                Window.Left = mousePos.X;
-                Window.Show();
-
-                //myPopup.Placement = System.Windows.Controls.Primitives.PlacementMode.AbsolutePoint;
-                //myPopup.HorizontalOffset = mousePos.X;
-                //myPopup.VerticalOffset = mousePos.Y;
-                //myPopup.IsOpen = true;
+                myPopup.Placement = System.Windows.Controls.Primitives.PlacementMode.AbsolutePoint;
+                myPopup.HorizontalOffset = mousePos.X;
+                myPopup.VerticalOffset = mousePos.Y;
+                myPopup.IsOpen = true;
             }
             else
             {
                 Timer.Stop();
-                btnPlay.Content = "Start pick color";
                 myPopup.IsOpen = false;
             }
         }

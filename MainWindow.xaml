@@ -6,28 +6,54 @@
         xmlns:local="clr-namespace:PixelPicker"
         mc:Ignorable="d"
         Background="#FF292929"
-        Title="PixelPicker" Height="254" Width="487" >
+        WindowStyle="ToolWindow"
+        Title="PixelPicker" SizeToContent="WidthAndHeight" >
     <Window.Resources>
+        <local:ColorToSolidColorBrushValueConverter  x:Key="ColorToSolidColorBrushConverter"/>
         <SolidColorBrush Color="{Binding PickedColor}" x:Key="ColorBrush" />
 
         <Style TargetType="TextBlock">
             <Setter Property="Foreground" Value="White"></Setter>
         </Style>
+        
+        
+        
     </Window.Resources>
     <Grid >
         <StackPanel>
-            <TextBlock Text="PixelPicker" FontSize="20"></TextBlock>
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Top" Margin="10">
-                <ToggleButton x:Name="btnPlay" Content="Start PixelPicker" Click="Button_Click" Height="50"/>
-                <Border Width="50" Height="50" Background="{DynamicResource ColorBrush}" BorderBrush="Black" BorderThickness="1"></Border>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Top" Margin="10 15 10 10">
+                <ToggleButton x:Name="btnPlay" Click="Button_Click" Height="40" Padding="5" >
+                    <Image Source="/Images/pipette.png" />
+                </ToggleButton>
+                <Border Margin="10 0 0 0" Width="40" Height="40" Background="{DynamicResource ColorBrush}" BorderBrush="Black" BorderThickness="1"></Border>
 
                 <TextBox Background="Transparent" BorderThickness="0" Text="{Binding PickedColor, Mode=OneWay}"
-                         IsReadOnly="True" TextWrapping="Wrap" FontSize="20" Foreground="White" Height="50" VerticalContentAlignment="Center" />
+                         IsReadOnly="False" TextWrapping="Wrap" FontSize="20" Foreground="White" Height="50" VerticalContentAlignment="Center" />
 
             </StackPanel>
-            <TextBlock Text="ZoomLevel" Foreground="White"></TextBlock>
-            <Slider Minimum="100" Maximum="300" TickPlacement="BottomRight" TickFrequency="100" IsSnapToTickEnabled="True" Width="300" Value="{Binding ZoomLevel}" />
-            <TextBlock Text="{Binding ZoomLevel}"></TextBlock>
+
+            <StackPanel Orientation="Horizontal" Margin="10">
+                <TextBlock Text="Zoom:" Foreground="White" />
+                <Slider Minimum="100" Maximum="500" TickPlacement="BottomRight" TickFrequency="100" IsSnapToTickEnabled="True" Width="300" Value="{Binding ZoomLevel}" />
+                <TextBlock Text="{Binding ZoomLevel}" Margin="5 0 0 0"/>
+            </StackPanel>
+
+            
+            <TextBlock Text="Clicked Pixels:"  Margin="10 15 0 0" FontSize="16"/>
+
+            <ListBox ItemsSource="{Binding PickedColors}" Background="Transparent" Height="300" Margin="10">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Background="Transparent">
+                            <Border Width="30" Height="30" Background="{Binding Converter={StaticResource ColorToSolidColorBrushConverter}}" BorderBrush="Black" BorderThickness="1"/>
+                            <TextBox Background="Transparent" BorderThickness="0" Text="{Binding Mode=OneWay}" VerticalContentAlignment="Center"
+                                     IsReadOnly="False" TextWrapping="Wrap" FontSize="14" Foreground="White"  />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+
         </StackPanel>
 
         <Popup Name="myPopup">
